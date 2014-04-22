@@ -1,6 +1,30 @@
 #!/usr/bin/env python
+#=============================================================================
+# Copyright (C) 2014 Gregor Larson <gregor.larson@gmail.com>
+#
+# deliverf is free software; you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 2.1 of the License, or (at your option)
+# any later version.
+#
+# deliverf is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with deliverf; if not, see:
+#     http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+#=============================================================================
+'''deliverf script
+
+@author: Gregor Larson <gregor.larson@gmail.com>
+@license: LGPLv2.1
+@version: 0.1
+'''
+
 # WARNING:
-# Don't edit live version of this file because it is invoked
+# Don't edit live version of this script because it is invoked
 # at any instant by postfix lda (see /etc/aliases).
 #
 from __future__ import print_function
@@ -98,7 +122,6 @@ def main(args):
          # Failed to get dotlock
          return 75	# try again later.
 
-
    # If we have created a lock file, it is important that it is removed
    # in all cases. We use the finally: clause for this.
    try:
@@ -166,7 +189,7 @@ def deliver_to(filename):
    write_delay=int(time.time() - pre_write)
    if write_delay > 15:
       # We were successful in writing the file, however, if there was
-      # a delay completing the operation, that should be investigated
+      # a delay completing the operation. This should be investigated
       # because there could be a problem with assumptions in postfix
       # or other software.
       logit("warning: delay %d seconds writing %s" % (write_delay,filename))
