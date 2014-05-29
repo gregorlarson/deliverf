@@ -29,6 +29,11 @@ or
 ```
 bob:    "|deliverf -n /mnt/users/bob/Inbox"
 ```
+or use `~/.forward` as follows:
+```
+"|deliverf -n remotedir/Inbox"
+```
+Note that this requires that the users HOME directory always be available.
 
 Locking / Mutex
 ===============
