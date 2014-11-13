@@ -25,8 +25,22 @@ A basic example of how this can be used in `/etc/aliases` is:
 ```
 bob:    "|deliverf /mnt/users/bob/Inbox"
 ```
+or
+```
+bob:    "|deliverf -n /mnt/users/bob/Inbox"
+```
+or use `~/.forward` as follows:
+```
+"|deliverf -n remotedir/Inbox"
+```
+Note that this requires that the users HOME directory always be available.
 
 Locking / Mutex
 ===============
 deliverf should interwork with movemail, email clients and other delivery agents because it locks the destination
 file when it is writing to it. It does this with a dot-lock file and using Linux file locking (`flock`).
+
+Issues
+======
+   * Mail may be deliverred as userid nobody.nogroup (depending on how your postfix, aliases etc are configured).
+   * 

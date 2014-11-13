@@ -135,6 +135,12 @@ def deliver_to(filename):
    fd=None
    try:
       # Open the file for appending.
+      # In theory, the O_APPEND flag should make an lseek to the
+      # end unnecessary because writes will always be appended to
+      # end of file. Not sure if this a bug or a feature :)
+      # In any case, I want to append, so I will indicate O_APPEND
+      # here, but I will use lseek also.
+      #
       fd = os.open(filename,os.O_APPEND | os.O_WRONLY | os.O_CREAT)
    except OSError:
       # In case the directory / mount is not available yet, exit with
@@ -156,38 +162,44 @@ def deliver_to(filename):
       return 75
 
    flock_delay=int(time.time() - pre_lock)
-   if flock_delay > 20:
-      # If it took more than 20 seconds to obtain the lock, we bail-out
+   if flock_delay > 10:
+      # If it took more than 10 seconds to obtain the lock, we bail-out
       # here in order to avoid a collision with some other software
       # that might have different assumptions.
       logit("warning, delayed lock (%d) on %s" % (flock_delay,filename))
       return 75
 
    # Got the lock on the output file. Seek to end in case the file
-   # changed while locking.
+   # changed while locking. Not sure this is actually required.
    os.lseek(fd,0,os.SEEK_END)
 
    # Append stdin to the output file.
    pre_write=time.time()
 
    buf=os.read(0,32768)
+   lc=None
    while buf:
       os.write(fd,buf)
       lc=buf[-1]
       buf=os.read(0,32768)
 
-   # If I were paranoid, I would check that the last character read was
-   # a newline......
+   # Because I'm paranoid, I require that the last character appended
+   # be a newline. This avoids a scenario where the previous message
+   # might change how the next message is handled by some software.
+   #
    if lc != '\n':
       logit("warning: added missing final newline to: "+filename)
       os.write(fd,'\n')
+   elif lc == None:
+      logit("warning: empty input recieved for: "+filename)
+      # At this point I could append a newline, but... probably not needed.
 
    #raise UserWarning("test")		# debug error injection
    #time.sleep(200)			# error injection
    os.close(fd)
 
    write_delay=int(time.time() - pre_write)
-   if write_delay > 15:
+   if write_delay > 10:
       # We were successful in writing the file, however, if there was
       # a delay completing the operation. This should be investigated
       # because there could be a problem with assumptions in postfix
