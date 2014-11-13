@@ -183,7 +183,7 @@ def deliver_to(filename):
       lc=buf[-1]
       buf=os.read(0,32768)
 
-   # Because I'm paranoid, I require that the last character appened
+   # Because I'm paranoid, I require that the last character appended
    # be a newline. This avoids a scenario where the previous message
    # might change how the next message is handled by some software.
    #
@@ -192,7 +192,7 @@ def deliver_to(filename):
       os.write(fd,'\n')
    elif lc == None:
       logit("warning: empty input recieved for: "+filename)
-      # At this point I append a newline, but... probably not needed.
+      # At this point I could append a newline, but... probably not needed.
 
    #raise UserWarning("test")		# debug error injection
    #time.sleep(200)			# error injection
