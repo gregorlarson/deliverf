@@ -10,10 +10,16 @@ Postfix will deliver mail to a file in mbox format. By default, `/var/mail/{user
 ```
 bob:  /home/bob/Inbox
 ```
+Another common example is in `~/.forward` like:
+```
+/mnt/nethome/bob/Mail/Inbox
+```
+
 One problem with local mail delivery to a file is that the directory must be mounted
 and available at all times when postfix is running, otherwise, postfix will return
 an error to the sending agent. Postfix will not re-attempt local delivery if the
-mount is missing.
+mount is missing. Depending on how your mail server is configured, it may even
+generate a separate bounce message or [backscatter].
 
 This simple script allows postfix to hold and re-attempt delivery of the message
 if the filesystem is not available. It does this by returning an exit code of
@@ -44,3 +50,5 @@ Issues
 ======
    * Mail may be deliverred as userid nobody.nogroup (depending on how your postfix, aliases etc are configured).
    * 
+
+[backscatter]: http://en.wikipedia.org/wiki/Backscatter_(email)
