@@ -36,12 +36,26 @@ Note that this requires that the users HOME directory always be available.
 It is possible to invoke deliverf directly from aliases, however, this is
 likely not the best way to use it because it will run with `nobody` permissions:
 ```
-bob:    "|deliverf /mnt/users/bob/Inbox"
+bob:    "|deliverf -s /mnt/users/bob/Inbox"
 ```
 or
 ```
 bob:    "|deliverf -d /mnt/users/bob/Inbox"
 ```
+
+Encrypted Home Directory
+========================
+If the user wants their mail delivered to an encrypted directory that is mounted
+when they log in (or some time after system boots), then in their *non-encrypted* HOME
+directory, they could put a `.forward` which directs their mail to an encrypted
+sub-directory which does not exist until their encrypted HOME is mounted. Provided
+they mount their encrypted HOME directory before the mail queue times out (postfix defaults to 5 days),
+their mail will be delivered into the encrypted home.
+ - you probably want to look at or test the behaviour of your mail queues in consideration
+ of this.
+ - Ensure time-outs are long enough and figure out if you would really want to bounce
+ that mail, discard it, or deal with it in some other way.
+
 
 Locking / Mutex
 ===============
@@ -52,7 +66,8 @@ advisory file locking (`fcntl` or `flock`).
 
 Logging
 =======
-Currently diagnostic output uses syslog only. TODO: allow stderr instead.
+Diagnostic output goes to stderr and optionally to syslog mail.info
+with `-s` or `--syslog`
 
 Issues
 ======
