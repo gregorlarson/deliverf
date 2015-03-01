@@ -20,7 +20,7 @@
 
 @author: Gregor Larson <gregor.larson@gmail.com>
 @license: LGPLv2.1
-@version: 0.1
+@version: 0.2
 '''
 
 # WARNING:
@@ -42,27 +42,47 @@ def arg_parser():
    import argparse
    aparser = argparse.ArgumentParser(description=
    	"Deliver from stdin to file with locking.")
-   aparser.add_argument("--nodotlock","-n",action="store_true",
-   	help="Don't use the (more expensive) {filename}.lock locking. Use only flock.")
+   aparser.add_argument("--nodotlock","-n",action="store_true",help=
+	'''Don't use the (more expensive) {filename}.lock locking.
+	Use only fcntl or flock advisory locking. As of version 0.2,
+	this arg is no longer needed because this will be the default
+	behaviour. To get the 0.1 behaviour, use -d''')
+   aparser.add_argument("--dotlock","-d",action="store_true",help=
+	'''Use dotlock method to lock files, in addition to the
+	fcntl or flock locking.''')
+   aparser.add_argument("--flock","-f",action="store_true",help=
+	'''Use flock instead of fcntl locking. Note that will not
+	work over NFS and it will not interact correctly with software
+	using the newer fcntl advisory locking (like postfix), so,
+	don't use this unless you have a specific reason.''')
+
    aparser.add_argument("file",type=str)
    return aparser
 
 def get_dotlock(dotlock):
+   '''Lock a file using the provided dotlock filename. The named file
+   is created, if it does not exist, or, if it is stale, in which case
+   a log is created. Note that if this function sees an existing, recent
+   lock on a file, it will wait a couple seconds and check again.
+   True is retured to indicate that the lock was obtained.
+   It is important that the caller remove the lock-file when done.'''
    try:
       # check for stale lock
       lstat=os.stat(dotlock)
       # lock file exists
       lock_age=int(time.time() - lstat.st_mtime)
-      if lock_age < 2:
+      if lock_age < 3:
          # A recient lock exists.
          # This will rarely happen, however, for performance reasons
-         # we sleep a second here to make success obtaining the lock
+         # we sleep a 2 seconds here to make success obtaining the lock
          # more likely. This is an optimization only.
-         time.sleep(1)
+         time.sleep(2)
    except OSError:
       # lock file does not exist.
       lock_age = -1
 
+   # Note that postfix 2.9 uses a stale lock time of 500 seconds,
+   # which seems really long to me.
    if lock_age > 120:
       # There is a lock file more than 120 seconds old.
       # This is an error situation that needs to be investigated.
@@ -112,10 +132,10 @@ def main(args):
 
    filename=pargs.file;
 
-   if pargs.nodotlock:
-      dotlock=None
-   else:
+   if pargs.dotlock:
       dotlock=filename+".lock"
+   else:
+      dotlock=None
 
    if dotlock:
       if not get_dotlock(dotlock):
@@ -125,13 +145,13 @@ def main(args):
    # If we have created a lock file, it is important that it is removed
    # in all cases. We use the finally: clause for this.
    try:
-      rc = deliver_to(filename)
+      rc = deliver_to(filename,pargs.flock)
    finally:
       if dotlock: os.unlink(dotlock)
 
    return rc
 
-def deliver_to(filename):
+def deliver_to(filename,flock=False):
    fd=None
    try:
       # Open the file for appending.
@@ -152,11 +172,19 @@ def deliver_to(filename):
    # latency or deadlocks, then we could change this to be non-blocking
    # and return 75 to try again later.
    #
-   # This should also work for NFS.
-   #
    pre_lock=time.time()
    try:
-      fcntl.flock(fd, fcntl.LOCK_EX)
+      if flock:
+         # Old BSD type flock system call, now supported on Linux as well,
+         # however, this may not work for NFS. Also, this will not interact
+         # properly with other software using the newer fcntl advisory
+         # locking (the default now for postfix).
+         fcntl.flock(fd, fcntl.LOCK_EX)
+      else:
+         # Newer fcntl locking that should also work on NFS
+         # This is the default advisory locking now for postfix.
+         fcntl.lockf(fd, fcntl.LOCK_EX)
+
    except IOError as e:
       logit("failed to lock %s: %s" % (filename, str(e)))
       return 75
