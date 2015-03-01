@@ -45,9 +45,10 @@ bob:    "|deliverf -d /mnt/users/bob/Inbox"
 
 Locking / Mutex
 ===============
-deliverf should interwork with movemail, email clients, and other delivery agents because it locks
-the destination file when it is writing to it. It does this with a dot-lock file and advisory file
-locking (`fcntl` or `flock`).
+deliverf should inter-work with movemail, email clients, and other delivery
+agents because it locks
+the destination file while writing. It does this with a dot-lock file and
+advisory file locking (`fcntl` or `flock`).
 
 Logging
 =======
@@ -55,7 +56,7 @@ Currently diagnostic output uses syslog only. TODO: allow stderr instead.
 
 Issues
 ======
-  * Mail may be deliverred as userid nobody.nogroup (depending on how your postfix, aliases etc are configured).
+  * Mail may be delivered as user-id nobody.nogroup (depending on how your postfix, aliases etc are configured).
   * 
 
 [backscatter]: http://en.wikipedia.org/wiki/Backscatter_(email)
