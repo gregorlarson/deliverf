@@ -29,11 +29,15 @@
 #
 from __future__ import print_function
 import sys,os,time,fcntl
-from syslog import syslog, openlog
+from syslog import syslog, openlog, LOG_MAIL
 
+log_to_syslog=False
 def logit(s):
-   syslog("deliverf: "+s)
-   print("deliverf: "+s, file=sys.stderr)	# debug
+   global log_to_syslog
+   if log_to_syslog:
+      syslog(s)		# defaults to LOG_INFO
+
+   print("deliverf: "+s, file=sys.stderr)
 
 aparser=None
 def arg_parser():
@@ -55,16 +59,22 @@ def arg_parser():
 	work over NFS and it will not interact correctly with software
 	using the newer fcntl advisory locking (like postfix), so,
 	don't use this unless you have a specific reason.''')
+   aparser.add_argument("--syslog","-s",action="store_true",help=
+	'''Send diagnostic output to syslog mail.info as well as
+	stderr.''')
 
    aparser.add_argument("file",type=str)
    return aparser
 
-def get_dotlock(dotlock):
+def get_dotlock(dotlock,check_only=False):
    '''Lock a file using the provided dotlock filename. The named file
    is created, if it does not exist, or, if it is stale, in which case
    a log is created. Note that if this function sees an existing, recent
    lock on a file, it will wait a couple seconds and check again.
    True is retured to indicate that the lock was obtained.
+   The check_only flag runs without creating (or removing) any lock file
+   and returns True to indicate not-locked or stale lock,
+   without actually creating a lock file.
    It is important that the caller remove the lock-file when done.'''
    try:
       # check for stale lock
@@ -73,12 +83,18 @@ def get_dotlock(dotlock):
       lock_age=int(time.time() - lstat.st_mtime)
       if lock_age < 3:
          # A recient lock exists.
+         if check_only:
+            return False	# check-only case does not wait.
+
          # This will rarely happen, however, for performance reasons
          # we sleep a 2 seconds here to make success obtaining the lock
          # more likely. This is an optimization only.
          time.sleep(2)
    except OSError:
       # lock file does not exist.
+      if check_only:
+         return True	# no lock file found
+
       lock_age = -1
 
    # Note that postfix 2.9 uses a stale lock time of 500 seconds,
@@ -89,16 +105,29 @@ def get_dotlock(dotlock):
       # The error may or may not be in this module. The .lock file may have
       # been left by another program. This error might be seen after a
       # power-failure or hard reset.
+      if check_only:
+         # In the check_only case, we consider a stale lock-file to
+         # be not-locked (True). If we put this check after the
+         # log below, that might result in repeated logs.
+         return True
+
       logit("Error %s age %d seconds" % (dotlock,lock_age))
       # Here we try and unlink the stale lock-file, which could
       # result in a race condition if someone else already unlinked
       # it and created a new lock file. If something is leaving stale
       # lock files around, it needs to be fixed!!
+
       try:
          os.unlink(dotlock)
       except OSError:
          logit("Error unlinking " + dotlock)
          return False	# failed to get dotlock
+
+   elif lock_age > 0:
+      if check_only:
+         # In the check-only case, return False if a non-stale lock file
+         # was found.
+         return False
 
    # There is no 'stale' lock file present, try and create the lock file.
    try:
@@ -128,26 +157,27 @@ def main(args):
 
    pargs=arg_parser().parse_args(args)
 
-   openlog("mail")
+   if pargs.syslog:
+      openlog(facility=LOG_MAIL)
+      global log_to_syslog
+      log_to_syslog=True
 
    filename=pargs.file;
+   dotlock=filename+".lock"
 
-   if pargs.dotlock:
-      dotlock=filename+".lock"
-   else:
-      dotlock=None
-
-   if dotlock:
-      if not get_dotlock(dotlock):
-         # Failed to get dotlock
-         return 75	# try again later.
+   # We acutally check for a non-stale dotlock, even if that option
+   # is not selected.
+   if not get_dotlock(dotlock, check_only=not pargs.dotlock):
+      # Failed to get dotlock or found an existing non-stale
+      # dotlock.
+      return 75	# try again later.
 
    # If we have created a lock file, it is important that it is removed
    # in all cases. We use the finally: clause for this.
    try:
       rc = deliver_to(filename,pargs.flock)
    finally:
-      if dotlock: os.unlink(dotlock)
+      if pargs.dotlock: os.unlink(dotlock)
 
    return rc
 
