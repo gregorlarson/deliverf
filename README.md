@@ -50,12 +50,14 @@ when they log in (or some time after system boots), then in their *non-encrypted
 directory, they could put a `.forward` which directs their mail to an encrypted
 sub-directory which does not exist until their encrypted HOME is mounted. Provided
 they mount their encrypted HOME directory before the mail queue times out (postfix defaults to 5 days),
-their mail will be delivered into the encrypted home.
+their mail will be delivered into the encrypted home:
+```
+"|deliverf /home/user/private/Mail/Inbox"
+```
  - you probably want to look at or test the behaviour of your mail queues in consideration
  of this.
  - Ensure time-outs are long enough and figure out if you would really want to bounce
  that mail, discard it, or deal with it in some other way.
-
 
 Locking / Mutex
 ===============
