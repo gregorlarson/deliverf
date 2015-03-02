@@ -1,10 +1,8 @@
-deliverf
-========
-
+# deliverf
 Utility to support delayed delivery of Postfix mail to a file.
-
-Introduction
-=========
+## Project Status
+In (small) production. Seems to be working ok. Feedback welcome.
+# Introduction
 Postfix will deliver mail to a file in mbox format. By default, `/var/mail/{username}`
 (in my distro). You can also indicate an arbritrary file. There are a number of ways to make it do this. A common example is a line in `/etc/aliases` as follows:
 ```
@@ -14,7 +12,6 @@ Another common example is in `~/.forward` like:
 ```
 /mnt/nethome/bob/Mail/Inbox
 ```
-
 One problem with local mail delivery to a file is that the directory must be mounted
 and available at all times when postfix is running, otherwise, postfix will return
 an error to the sending agent. Postfix will not re-attempt local delivery if the
@@ -25,8 +22,7 @@ This simple script allows postfix to queue and re-attempt delivery of the messag
 if the filesystem is not available. It does this by returning an exit code of
 75 (`EX_TEMPFAIL`) when it cannot lock and write the destination file.
 
-Usage
-=====
+# Usage
 Most of the time, deliverf will be used with `procmail` or `~/.forward` as follows:
 ```
 "|deliverf remotedir/Inbox"
@@ -42,9 +38,7 @@ or
 ```
 bob:    "|deliverf -d /mnt/users/bob/Inbox"
 ```
-
-Encrypted Home Directory
-========================
+## Encrypted Home Directory
 If the user wants their mail delivered to an encrypted directory that is mounted
 when they log in (or some time after system boots), then in their *non-encrypted* HOME
 directory, they could put a `.forward` which directs their mail to an encrypted
@@ -59,20 +53,17 @@ their mail will be delivered into the encrypted home:
  - Ensure time-outs are long enough and figure out if you would really want to bounce
  that mail, discard it, or deal with it in some other way.
 
-Locking / Mutex
-===============
+# Locking / Mutex
 deliverf should inter-work with movemail, email clients, and other delivery
 agents because it locks
 the destination file while writing. It does this with a dot-lock file and
 advisory file locking (`fcntl` or `flock`).
 
-Logging
-=======
+# Logging
 Diagnostic output goes to stderr and optionally to syslog mail.info
 with `-s` or `--syslog`
 
-Issues
-======
+# Issues
   * Mail may be delivered as user-id nobody.nogroup (depending on how your postfix, aliases etc are configured).
   * 
 
