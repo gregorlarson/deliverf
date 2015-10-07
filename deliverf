@@ -191,7 +191,14 @@ def deliver_to(filename,flock=False):
       # In any case, I want to append, so I will indicate O_APPEND
       # here, but I will use lseek also.
       #
-      fd = os.open(filename,os.O_APPEND | os.O_WRONLY | os.O_CREAT)
+      # It is an error for mail files to be executable, and, some
+      # delivery agents will not write to it for security reasons.
+      # Here, we give a create mode of 0660, however, if the file
+      # already exists, we could check that it is NOT executable.
+      # Note that the current umask is applied also. so the actual
+      # mode may be 0640 (if umask is 0022).
+      #
+      fd = os.open(filename,os.O_APPEND | os.O_WRONLY | os.O_CREAT, 0o660)
    except OSError:
       # In case the directory / mount is not available yet, exit with
       # a return code that will allow postfix to try again later.
